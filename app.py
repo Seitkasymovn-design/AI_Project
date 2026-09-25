@@ -59,9 +59,9 @@ if api_key:
 
         with st.chat_message("assistant"):
             try:
-                # Тек қазіргі белсенді жаңа модельді қолданамыз
+                # Google сұрап тұрған жаңа модель
                 model = genai.GenerativeModel(
-                    model_name="gemini-2.5-flash",
+                    model_name="gemini-3.8-flash",
                     system_instruction=system_instruction
                 )
                 response = model.generate_content(prompt)
