@@ -58,28 +58,16 @@ if api_key:
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            # Ең тұрақты модельдер тізімі арқылы кезекпен жіберу
-            candidate_models = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
-            response_text = None
-            last_error = None
-
-            for model_name in candidate_models:
-                try:
-                    model = genai.GenerativeModel(
-                        model_name=model_name,
-                        system_instruction=system_instruction
-                    )
-                    response = model.generate_content(prompt)
-                    response_text = response.text
-                    break
-                except Exception as e:
-                    last_error = e
-                    continue
-
-            if response_text:
-                st.markdown(response_text)
-                st.session_state.messages.append({"role": "assistant", "content": response_text})
-            else:
-                st.error(f"Қате орын алды: {last_error}")
+            try:
+                # Тек қазіргі белсенді жаңа модельді қолданамыз
+                model = genai.GenerativeModel(
+                    model_name="gemini-2.5-flash",
+                    system_instruction=system_instruction
+                )
+                response = model.generate_content(prompt)
+                st.markdown(response.text)
+                st.session_state.messages.append({"role": "assistant", "content": response.text})
+            except Exception as e:
+                st.error(f"Қате орын алды: {e}")
 else:
     st.info("Жұмысты бастау үшін сол жақтағы панельге Gemini API Key кіргізіңіз.")
