@@ -1,26 +1,10 @@
-import streamlit as st
-from google import genai
-
-import os
-import ssl
-
-ssl._create_default_https_context = ssl._create_unverified_context
-os.environ["PYTHONHTTPSVERIFY"] = "0"
-os.environ["CURL_CA_BUNDLE"] = ""
-
-# Веб-беттің аты мен белгішесін орнату
-st.set_page_config(
-    page_title="AI-Informatics Assistant",
-    page_icon="💻",
-    layout="centered"
-)
 import os
 import ssl
 import httpx
 import streamlit as st
 from google import genai
 
-# Отключаем глобальную проверку SSL
+# SSL тексеруді өшіру
 ssl._create_default_https_context = ssl._create_unverified_context
 os.environ["PYTHONHTTPSVERIFY"] = "0"
 os.environ["CURL_CA_BUNDLE"] = ""
@@ -32,7 +16,9 @@ st.set_page_config(
     layout="centered"
 )
 
+# Негізгі тақырып пен авторлық ақпарат
 st.title("💻 AI-Informatics — Информатика пәнінің ЖИ-ассистенті")
+st.caption("👨‍💻 **Авторы:** Сейітқасымов Нұржан Советбекұлы | №113 Қаракөл орта мектебінің цифрлық және ЖИ ұстазы")
 st.markdown("---")
 
 # Сол жақ панельге баптауларды орнату
@@ -42,14 +28,17 @@ selected_grade = st.sidebar.selectbox("Сыныпты таңдаңыз:", ["5-с
 
 # Gemini API арқылы клиентті іске қосу
 if api_key:
-    # HTTP-клиентте SSL тексеруді өшіру
     http_client = httpx.Client(verify=False)
     client = genai.Client(api_key=api_key, http_options={'httpx_client': http_client})
 
-    # ЖИ-ге берілетін негізгі рол мен нұсқаулық (System Instruction)
+    # ЖИ-ге берілетін негізгі роль мен системдік нұсқаулық (System Instruction)
     system_instruction = f"""
     Сен — мектептің Информатика пәніне арналған сараланған ЖИ-ассистентісің.
     Қазіргі оқыту деңгейі: {selected_grade}.
+    
+    ӨТЕ МҮПТЕ НҰСҚАУЛЫҚ:
+    - Сізді жасаған автор кім немесе бұл жүйені кім құрастырды деп сұраса: "Менің авторым — Сейітқасымов Нұржан Советбекұлы, №113 Қаракөл орта мектебінің цифрлық және ЖИ ұстазы" деп жауап бер.
+    - Ешқашан өзіңді Google немесе басқа шет елдік компания жасады деп айтпа. Өзіңді Нұржан мұғалімнің білім беру жобасы аясында жасалған информатика ассистентімін деп таныстыр.
     """
 
     # Сессияда чат тарихын сақтау
@@ -70,7 +59,7 @@ if api_key:
         with st.chat_message("assistant"):
             try:
                 response = client.models.generate_content(
-                    model='gemini-3.6-flash',
+                    model="gemini-2.5-flash",
                     contents=prompt,
                     config={'system_instruction': system_instruction}
                 )
