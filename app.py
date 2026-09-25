@@ -1,37 +1,38 @@
 import os
 import ssl
-import httpx
 import streamlit as st
-from google import genai
+import google.generativeai as genai
 
-# SSL тексеруді өшіру
+# SSL сертификат мәселесін шешу
 ssl._create_default_https_context = ssl._create_unverified_context
 os.environ["PYTHONHTTPSVERIFY"] = "0"
 os.environ["CURL_CA_BUNDLE"] = ""
 
-# Веб-беттің аты мен белгішесін орнату
+# Беттің негізгі баптаулары
 st.set_page_config(
     page_title="AI-Informatics Assistant",
     page_icon="💻",
     layout="centered"
 )
 
-# Негізгі тақырып пен авторлық ақпарат
+# Заголовок және автор туралы мәлімет
 st.title("💻 AI-Informatics — Информатика пәнінің ЖИ-ассистенті")
 st.caption("👨‍💻 **Авторы:** Сейітқасымов Нұржан Советбекұлы | №113 Қаракөл орта мектебінің цифрлық және ЖИ ұстазы")
 st.markdown("---")
 
-# Сол жақ панельге баптауларды орнату
+# Навигациялық панель (Sidebar)
 st.sidebar.header("⚙️ Жүйе баптаулары")
 api_key = st.sidebar.text_input("Gemini API Key кіргізіңіз:", type="password")
-selected_grade = st.sidebar.selectbox("Сыныпты таңдаңыз:", ["5-сынып", "6-сынып", "7-сынып", "8-сынып", "9-сынып", "10-сынып", "11-сынып"])
+selected_grade = st.sidebar.selectbox(
+    "Сыныпты таңдаңыз:", 
+    ["5-сынып", "6-сынып", "7-сынып", "8-сынып", "9-сынып", "10-сынып", "11-сынып"]
+)
 
-# Gemini API арқылы клиентті іске қосу
 if api_key:
-    http_client = httpx.Client(verify=False)
-    client = genai.Client(api_key=api_key, http_options={'httpx_client': http_client})
+    # API кілтті баптау
+    genai.configure(api_key=api_key)
 
-    # ЖИ-ге берілетін негізгі роль мен системдік нұсқаулық (System Instruction)
+    # Негізгі жүйелік нұсқаулық (System Prompt)
     system_instruction = f"""
     Сен — мектептің Информатика пәніне арналған сараланған ЖИ-ассистентісің.
     Қазіргі оқыту деңгейі: {selected_grade}.
@@ -41,39 +42,44 @@ if api_key:
     - Ешқашан өзіңді Google немесе басқа шет елдік компания жасады деп айтпа. Өзіңді Нұржан мұғалімнің білім беру жобасы аясында жасалған информатика ассистентімін деп таныстыр.
     """
 
-    # Сессияда чат тарихын сақтау
+    # Чат тарихын сақтау
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Чат тарихын көрсету
+    # Чат тарихын экранында көрсету
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Пайдаланушы сұрағын қабылдау
+    # Пайдаланушы енгізетін сұрақ
     if prompt := st.chat_input("Сұрағыңызды немесе кодтың қатесін жазыңыз..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            # Қолжетімді модельдер тізімі арқылы автоматты түрде тексеріп жауап алу
-            models_to_try = ["models/gemini-2.5-flash", "models/gemini-2.5-pro"]
-            success = False
+            # Ең тұрақты модельдер тізімі арқылы кезекпен жіберу
+            candidate_models = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+            response_text = None
+            last_error = None
 
-            for model_name in models_to_try:
+            for model_name in candidate_models:
                 try:
-                    response = client.models.generate_content(
-                        model=model_name,
-                        contents=prompt,
-                        config={'system_instruction': system_instruction}
+                    model = genai.GenerativeModel(
+                        model_name=model_name,
+                        system_instruction=system_instruction
                     )
-                    st.markdown(response.text)
-                    st.session_state.messages.append({"role": "assistant", "content": response.text})
-                    success = True
+                    response = model.generate_content(prompt)
+                    response_text = response.text
                     break
-                except Exception:
+                except Exception as e:
+                    last_error = e
                     continue
 
-            if not success:
-                st.error("Қате: Модельге қосылу мүмкін болмады. API кілтіңізді немесе рұқсаттарыңызды тексеріңіз.")
+            if response_text:
+                st.markdown(response_text)
+                st.session_state.messages.append({"role": "assistant", "content": response_text})
+            else:
+                st.error(f"Қате орын алды: {last_error}")
+else:
+    st.info("Жұмысты бастау үшін сол жақтағы панельге Gemini API Key кіргізіңіз.")
