@@ -58,6 +58,7 @@ if api_key:
 
         with st.chat_message("assistant"):
             try:
+                # 1-талпыныс: Негізгі модельмен жауап алу
                 response = client.models.generate_content(
                     model="gemini-3.8-flash",
                     contents=prompt,
@@ -66,4 +67,14 @@ if api_key:
                 st.markdown(response.text)
                 st.session_state.messages.append({"role": "assistant", "content": response.text})
             except Exception as e:
-                st.error(f"Қате орын алды: {e}")
+                # 2-талпыныс: Серверде жүктеме болып 503 қатесі шықса, қосалқы модельге ауысу
+                try:
+                    response = client.models.generate_content(
+                        model="gemini-1.5-flash",
+                        contents=prompt,
+                        config={'system_instruction': system_instruction}
+                    )
+                    st.markdown(response.text)
+                    st.session_state.messages.append({"role": "assistant", "content": response.text})
+                except Exception as inner_e:
+                    st.error("Google серверлерінде уақытша өте жоғары жүктеме болуда. Өтініш, 1-2 минуттан кейін қайта байқап көрсеңіз.")
