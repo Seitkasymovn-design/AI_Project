@@ -57,13 +57,23 @@ if api_key:
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            try:
-                response = client.models.generate_content(
-                    model="gemini-1.5-flash",
-                    contents=prompt,
-                    config={'system_instruction': system_instruction}
-                )
-                st.markdown(response.text)
-                st.session_state.messages.append({"role": "assistant", "content": response.text})
-            except Exception as e:
-                st.error(f"Қате орын алды: {e}")
+            # Қолжетімді модельдер тізімі арқылы автоматты түрде тексеріп жауап алу
+            models_to_try = ["models/gemini-2.5-flash", "models/gemini-2.5-pro"]
+            success = False
+
+            for model_name in models_to_try:
+                try:
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=prompt,
+                        config={'system_instruction': system_instruction}
+                    )
+                    st.markdown(response.text)
+                    st.session_state.messages.append({"role": "assistant", "content": response.text})
+                    success = True
+                    break
+                except Exception:
+                    continue
+
+            if not success:
+                st.error("Қате: Модельге қосылу мүмкін болмады. API кілтіңізді немесе рұқсаттарыңызды тексеріңіз.")
