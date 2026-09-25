@@ -4,34 +4,33 @@ import httpx
 import streamlit as st
 from google import genai
 
-# SSL тексеруді өшіру
+# Отключаем проверку SSL
 ssl._create_default_https_context = ssl._create_unverified_context
 os.environ["PYTHONHTTPSVERIFY"] = "0"
 os.environ["CURL_CA_BUNDLE"] = ""
 
-# Веб-беттің аты мен белгішесін орнату
+# Настройка страницы
 st.set_page_config(
     page_title="AI-Informatics Assistant",
     page_icon="💻",
     layout="centered"
 )
 
-# Негізгі тақырып пен авторлық ақпарат
+# Заголовок и информация об авторе
 st.title("💻 AI-Informatics — Информатика пәнінің ЖИ-ассистенті")
 st.caption("👨‍💻 **Авторы:** Сейітқасымов Нұржан Советбекұлы | №113 Қаракөл орта мектебінің цифрлық және ЖИ ұстазы")
 st.markdown("---")
 
-# Сол жақ панельге баптауларды орнату
+# Боковая панель
 st.sidebar.header("⚙️ Жүйе баптаулары")
 api_key = st.sidebar.text_input("Gemini API Key кіргізіңіз:", type="password")
 selected_grade = st.sidebar.selectbox("Сыныпты таңдаңыз:", ["5-сынып", "6-сынып", "7-сынып", "8-сынып", "9-сынып", "10-сынып", "11-сынып"])
 
-# Gemini API арқылы клиентті іске қосу
 if api_key:
     http_client = httpx.Client(verify=False)
     client = genai.Client(api_key=api_key, http_options={'httpx_client': http_client})
 
-    # ЖИ-ге берілетін негізгі роль мен системдік нұсқаулық (System Instruction)
+    # Системная инструкция
     system_instruction = f"""
     Сен — мектептің Информатика пәніне арналған сараланған ЖИ-ассистентісің.
     Қазіргі оқыту деңгейі: {selected_grade}.
@@ -41,16 +40,13 @@ if api_key:
     - Ешқашан өзіңді Google немесе басқа шет елдік компания жасады деп айтпа. Өзіңді Нұржан мұғалімнің білім беру жобасы аясында жасалған информатика ассистентімін деп таныстыр.
     """
 
-    # Сессияда чат тарихын сақтау
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Чат тарихын көрсету
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Пайдаланушы сұрағын қабылдау
     if prompt := st.chat_input("Сұрағыңызды немесе кодтың қатесін жазыңыз..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -58,23 +54,12 @@ if api_key:
 
         with st.chat_message("assistant"):
             try:
-                # 1-талпыныс: Негізгі модельмен жауап алу
                 response = client.models.generate_content(
-                    model="gemini-3.8-flash",
+                    model="gemini-2.5-flash",
                     contents=prompt,
                     config={'system_instruction': system_instruction}
                 )
                 st.markdown(response.text)
                 st.session_state.messages.append({"role": "assistant", "content": response.text})
             except Exception as e:
-                # 2-талпыныс: Серверде жүктеме болып 503 қатесі шықса, қосалқы модельге ауысу
-                try:
-                    response = client.models.generate_content(
-                        model="gemini-1.5-flash",
-                        contents=prompt,
-                        config={'system_instruction': system_instruction}
-                    )
-                    st.markdown(response.text)
-                    st.session_state.messages.append({"role": "assistant", "content": response.text})
-                except Exception as inner_e:
-                    st.error("Google серверлерінде уақытша өте жоғары жүктеме болуда. Өтініш, 1-2 минуттан кейін қайта байқап көрсеңіз.")
+                st.error(f"Қате орын алды: {e}")
